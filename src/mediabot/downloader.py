@@ -191,7 +191,7 @@ def _download_sync(url: str, mode: str, height: int | None, settings: Settings) 
     try:
         info = _extract_info_with_tiktok_fallback(url, opts, download=True)
         title = str((info or {}).get("title") or "وسائط")[:180]
-            duration = int(info["duration"]) if info and info.get("duration") else None
+        duration = int(info["duration"]) if info and info.get("duration") else None
         candidates = [p for p in workdir.iterdir() if p.is_file() and not p.name.endswith((".part", ".ytdl"))]
         if not candidates:
             raise DownloadError("اكتمل الطلب دون إنشاء ملف قابل للإرسال.")
