@@ -61,7 +61,7 @@ class Settings:
             owner_ids=_csv_ints(os.getenv("OWNER_IDS", "")),
             max_file_mb=max_file_mb,
             max_source_file_mb=max_source_file_mb,
-            max_duration_seconds=_positive_int("MAX_DURATION_SECONDS", 3600),
+            max_duration_seconds=_positive_int("MAX_DURATION_SECONDS", 86400),
             max_concurrent_downloads=_positive_int("MAX_CONCURRENT_DOWNLOADS", 1),
             user_cooldown_seconds=_positive_int("USER_COOLDOWN_SECONDS", 8, minimum=0),
             data_dir=data_dir,
