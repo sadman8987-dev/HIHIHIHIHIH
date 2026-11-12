@@ -152,7 +152,7 @@ def _inspect_sync(url: str, settings: Settings) -> MediaInfo:
         raise DownloadError("لم أستطع العثور على وسائط قابلة للتنزيل في هذا الرابط.")
     duration = int(info["duration"]) if info.get("duration") else None
     if duration and duration > settings.max_duration_seconds:
-        raise DownloadError(f"مدة الوسائط تتجاوز الحد المسموح ({settings.max_duration_seconds // 60} دقيقة).")
+        raise DownloadError(f"مدة الوسائط تتجاوز الحد الأقصى للتنزيل ({settings.max_duration_seconds // 60} دقيقة).")
     formats = info.get("formats") or []
     heights = sorted({int(item["height"]) for item in formats if item.get("height") and item.get("vcodec") != "none"}, reverse=True)
     return MediaInfo(title=str(info.get("title") or "وسائط")[:180], duration=duration, heights=heights)
