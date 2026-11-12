@@ -1,0 +1,13 @@
+services:
+  bot:
+    build: .
+    container_name: media-fetch-telegram
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATA_DIR: /data
+      TEMP_DIR: /tmp/media-fetch-bot
+    volumes:
+      - ./data:/data
+    init: true
