@@ -1,13 +1,16 @@
 services:
-  - type: worker
+  - type: web
     name: hihihihi-media-bot
     runtime: docker
-    plan: starter
+    plan: free
     region: frankfurt
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
     autoDeploy: true
     envVars:
       - key: BOT_TOKEN
         sync: false
+      - key: WEBHOOK_SECRET
+        generateValue: true
       - key: DATA_DIR
         value: /tmp/bot-data
