@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
+import os
 import re
 import shutil
 import socket
@@ -109,7 +110,7 @@ def _base_options(settings: Settings, url: str | None = None) -> dict:
             "Referer": "https://www.tiktok.com/",
             "Accept-Language": "en-US,en;q=0.9",
         }
-        cookies = __import__("os").getenv("TIKTOK_COOKIES_FILE") or __import__("os").getenv("COOKIES_FILE")
+        cookies = os.getenv("TIKTOK_COOKIES_FILE") or os.getenv("COOKIES_FILE")
         if cookies and Path(cookies).is_file():
             opts["cookiefile"] = cookies
     return opts
