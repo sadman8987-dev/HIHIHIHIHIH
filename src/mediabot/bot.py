@@ -80,7 +80,7 @@ async def about(message: Message, settings: Settings) -> None:
         "<b>Media Fetch</b> يستخدم yt-dlp وFFmpeg لمعالجة الروابط العامة التي تدعمها المكتبتان.\n"
         f"حجم الجزء الأقصى: {settings.max_file_mb} MB، وحد المصدر الكامل: {settings.max_source_file_mb} MB، "
         f"وأقصى مدة: {settings.max_duration_seconds // 60} دقيقة.\n"
-        "إذا تجاوز الملف حد الجزء، يقسمه FFmpeg ويرسل الأجزاء مرقّمة.\n"
+        "إذا تجاوز الفيديو 60 دقيقة أو تجاوز الملف حد الحجم، يقسمه FFmpeg ويرسل الأجزاء مرقّمة.\n"
         "حد الرفع الرسمي يقارب 50 MB؛ لذلك نترك هامشًا آمنًا.\n"
         "لا يتجاوز البوت تسجيل الدخول أو DRM أو القيود المدفوعة. لا ترسل روابط خاصة أو بيانات دخول. "
         "تُحذف الملفات المؤقتة بعد الإرسال، ولا تُحفظ روابط الوسائط في قاعدة البيانات."
@@ -229,7 +229,7 @@ async def begin_download(
             max_bytes = settings.max_file_mb * 1_000_000
             if media.path.stat().st_size > max_bytes:
                 await status.edit_text("الملف أكبر من الحد المسموح؛ جارٍ تقسيمه إلى أجزاء…")
-            parts = await asyncio.to_thread(split_media, media.path, mode, media.duration, max_bytes)
+            parts = await asyncio.to_thread(split_media, media.path, mode, media.duration, max_bytes, max_duration_seconds=3600)
             total_parts = len(parts)
             stem = _safe_filename(media.title)
             for index, part in enumerate(parts, start=1):
