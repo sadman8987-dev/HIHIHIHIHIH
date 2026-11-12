@@ -97,23 +97,30 @@ def _base_options(settings: Settings, url: str | None = None) -> dict:
         "cachedir": False,
         "logger": _YtLogger(),
     }
-    # TikTok is more aggressive about TLS/client fingerprinting than the other
-    # extractors. Keep this isolated so YouTube and other platforms are unchanged.
+    # Match the known-working downloader's standard yt-dlp request settings.
+    # Keep these overrides limited to TikTok; other platforms remain unchanged.
     if url and _is_tiktok_url(url):
-        opts["impersonate"] = "chrome"
-        opts["http_headers"] = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/131.0.0.0 Safari/537.36"
-            ),
-            "Referer": "https://www.tiktok.com/",
-            "Accept-Language": "en-US,en;q=0.9",
-        }
-        cookies = os.getenv("TIKTOK_COOKIES_FILE") or os.getenv("COOKIES_FILE")
-        if cookies and Path(cookies).is_file():
+        opts.update(
+            socket_timeout=20,
+            retries=5,
+            fragment_retries=5,
+            concurrent_fragment_downloads=5,
+            http_chunk_size=10 * 1024 * 1024,
+            geo_bypass=True,
+        )
+        cookies = (
+            os.getenv("TIKTOK_COOKIES_FILE")
+            or os.getenv("COOKIES_FILE")
+            or "cookies.txt"
+        )
+        if Path(cookies).is_file():
             opts["cookiefile"] = cookies
     return opts
+
+
+def _extract_info(url: str, opts: dict, *, download: bool):
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        return ydl.extract_info(url, download=download)
 
 
 class _YtLogger:
@@ -128,25 +135,10 @@ class _YtLogger:
         log.error("yt-dlp reported an extraction error")
 
 
-def _extract_info_with_tiktok_fallback(url: str, opts: dict, *, download: bool):
-    """Retry TikTok without curl-cffi impersonation if that layer raises an assertion."""
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(url, download=download)
-    except AssertionError:
-        if not _is_tiktok_url(url) or "impersonate" not in opts:
-            raise
-        fallback_opts = dict(opts)
-        fallback_opts.pop("impersonate", None)
-        log.warning("TikTok client impersonation failed; retrying with standard HTTPS headers")
-        with yt_dlp.YoutubeDL(fallback_opts) as ydl:
-            return ydl.extract_info(url, download=download)
-
-
 def _inspect_sync(url: str, settings: Settings) -> MediaInfo:
     opts = _base_options(settings, url) | {"skip_download": True, "extract_flat": False}
     try:
-        info = _extract_info_with_tiktok_fallback(url, opts, download=False)
+        info = _extract_info(url, opts, download=False)
     except Exception as exc:
         log.info("Media inspection failed for %s (%s)", "TikTok" if _is_tiktok_url(url) else "media URL", type(exc).__name__)
         if _is_tiktok_url(url):
@@ -189,7 +181,7 @@ def _download_sync(url: str, mode: str, height: int | None, settings: Settings) 
     else:
         opts["merge_output_format"] = "mp4"
     try:
-        info = _extract_info_with_tiktok_fallback(url, opts, download=True)
+        info = _extract_info(url, opts, download=True)
         title = str((info or {}).get("title") or "وسائط")[:180]
         duration = int(info["duration"]) if info and info.get("duration") else None
         candidates = [p for p in workdir.iterdir() if p.is_file() and not p.name.endswith((".part", ".ytdl"))]
