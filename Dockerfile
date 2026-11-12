@@ -21,6 +21,5 @@ RUN pip install --no-cache-dir --no-deps . \
     && chown -R appuser:appuser /app /data /tmp/media-fetch-bot
 
 USER appuser
-VOLUME ["/data"]
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["python", "-m", "mediabot.main"]
