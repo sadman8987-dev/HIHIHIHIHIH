@@ -79,17 +79,40 @@ async def validate_public_url(url: str) -> None:
         raise DownloadError("هذا الرابط لا يشير إلى موقع عام، لذلك تم رفضه لأسباب أمنية.")
 
 
-def _base_options(settings: Settings) -> dict:
-    return {
+def _is_tiktok_url(url: str) -> bool:
+    host = (urlsplit(url).hostname or "").lower().rstrip(".")
+    return host == "tiktok.com" or host.endswith(".tiktok.com")
+
+
+def _base_options(settings: Settings, url: str | None = None) -> dict:
+    opts = {
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
-        "socket_timeout": 20,
-        "retries": 2,
-        "fragment_retries": 2,
+        "socket_timeout": 30,
+        "retries": 4,
+        "fragment_retries": 4,
+        "extractor_retries": 3,
         "cachedir": False,
         "logger": _YtLogger(),
     }
+    # TikTok is more aggressive about TLS/client fingerprinting than the other
+    # extractors. Keep this isolated so YouTube and other platforms are unchanged.
+    if url and _is_tiktok_url(url):
+        opts["impersonate"] = "chrome"
+        opts["http_headers"] = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/131.0.0.0 Safari/537.36"
+            ),
+            "Referer": "https://www.tiktok.com/",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        cookies = __import__("os").getenv("TIKTOK_COOKIES_FILE") or __import__("os").getenv("COOKIES_FILE")
+        if cookies and Path(cookies).is_file():
+            opts["cookiefile"] = cookies
+    return opts
 
 
 class _YtLogger:
@@ -105,12 +128,18 @@ class _YtLogger:
 
 
 def _inspect_sync(url: str, settings: Settings) -> MediaInfo:
-    opts = _base_options(settings) | {"skip_download": True, "extract_flat": False}
+    opts = _base_options(settings, url) | {"skip_download": True, "extract_flat": False}
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
     except Exception as exc:
-        log.info("Media inspection failed (%s)", type(exc).__name__)
+        log.info("Media inspection failed for %s (%s)", "TikTok" if _is_tiktok_url(url) else "media URL", type(exc).__name__)
+        if _is_tiktok_url(url):
+            raise DownloadError(
+                "تيك توك رفض طلب السيرفر أو لم يسمح باستخراج الفيديو. جرّب رابطًا عامًا، "
+                "وإذا استمرت المشكلة أضف TIKTOK_COOKIES_FILE في Railway لملف cookies.txt صالح. "
+                "قد يظل الحظر قائمًا بسبب IP السيرفر."
+            ) from None
         raise DownloadError("لم أستطع قراءة الوسائط. قد يكون الرابط غير مدعوم أو خاصًا أو محميًا بتسجيل دخول.") from None
     if not isinstance(info, dict):
         raise DownloadError("لم أستطع العثور على وسائط قابلة للتنزيل في هذا الرابط.")
@@ -134,7 +163,7 @@ def _download_sync(url: str, mode: str, height: int | None, settings: Settings) 
         f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best[height<={height}]/best"
         if height else "bestvideo*+bestaudio/best"
     )
-    opts = _base_options(settings) | {
+    opts = _base_options(settings, url) | {
         "format": format_selector,
         "outtmpl": str(workdir / "%(id)s.%(ext)s"),
         "max_filesize": max_source_bytes,
