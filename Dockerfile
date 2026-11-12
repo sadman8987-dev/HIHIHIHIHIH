@@ -20,6 +20,6 @@ RUN pip install --no-cache-dir --no-deps . \
     && mkdir -p /data /tmp/media-fetch-bot \
     && chown -R appuser:appuser /app /data /tmp/media-fetch-bot
 
-USER appuser
+# Railway mounts /data as root-owned; run as root so SQLite can create its database there.
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["python", "-m", "mediabot.main"]
