@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "media-fetch-telegram"
+version = "1.0.0"
+description = "Arabic Telegram bot for downloading public media using yt-dlp"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = [
+  "aiogram>=3.13,<4",
+  "aiohttp>=3.10,<4",
+  "aiosqlite>=0.20,<1",
+  "yt-dlp[default]>=2025.3.31,<2027",
+]
+
+[project.scripts]
+media-fetch-bot = "mediabot.main:run"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
