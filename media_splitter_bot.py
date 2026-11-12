@@ -7,7 +7,7 @@
   API_ID, API_HASH     من https://my.telegram.org
   BOT_TOKEN            من @BotFather
   ALLOWED_USERS        (اختياري) ايديهات مفصولة بفاصلة، فاضي = الكل
-  MAX_MINUTES          (اختياري) افتراضي 55
+  MAX_MINUTES          (اختياري) افتراضي 60
   MAX_MB               (اختياري) افتراضي 1900
   MAX_JOBS             (اختياري) عدد المهام المتزامنة، افتراضي 2
   WORKDIR              (اختياري) مجلد مؤقت
@@ -32,7 +32,7 @@ API_ID = int(os.environ["API_ID"])
 API_HASH = os.environ["API_HASH"]
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 ALLOWED = {int(x) for x in os.getenv("ALLOWED_USERS", "").split(",") if x.strip()}
-DEF_MIN = float(os.getenv("MAX_MINUTES", "55"))
+DEF_MIN = float(os.getenv("MAX_MINUTES", "60"))
 DEF_MB = float(os.getenv("MAX_MB", "1900"))
 MAX_JOBS = int(os.getenv("MAX_JOBS", "2"))
 WORKDIR = Path(os.getenv("WORKDIR", tempfile.gettempdir())) / "splitbot"
