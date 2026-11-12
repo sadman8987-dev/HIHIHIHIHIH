@@ -128,11 +128,25 @@ class _YtLogger:
         log.error("yt-dlp reported an extraction error")
 
 
+def _extract_info_with_tiktok_fallback(url: str, opts: dict, *, download: bool):
+    """Retry TikTok without curl-cffi impersonation if that layer raises an assertion."""
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(url, download=download)
+    except AssertionError:
+        if not _is_tiktok_url(url) or "impersonate" not in opts:
+            raise
+        fallback_opts = dict(opts)
+        fallback_opts.pop("impersonate", None)
+        log.warning("TikTok client impersonation failed; retrying with standard HTTPS headers")
+        with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+            return ydl.extract_info(url, download=download)
+
+
 def _inspect_sync(url: str, settings: Settings) -> MediaInfo:
     opts = _base_options(settings, url) | {"skip_download": True, "extract_flat": False}
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+        info = _extract_info_with_tiktok_fallback(url, opts, download=False)
     except Exception as exc:
         log.info("Media inspection failed for %s (%s)", "TikTok" if _is_tiktok_url(url) else "media URL", type(exc).__name__)
         if _is_tiktok_url(url):
@@ -175,9 +189,8 @@ def _download_sync(url: str, mode: str, height: int | None, settings: Settings) 
     else:
         opts["merge_output_format"] = "mp4"
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            title = str((info or {}).get("title") or "وسائط")[:180]
+        info = _extract_info_with_tiktok_fallback(url, opts, download=True)
+        title = str((info or {}).get("title") or "وسائط")[:180]
             duration = int(info["duration"]) if info and info.get("duration") else None
         candidates = [p for p in workdir.iterdir() if p.is_file() and not p.name.endswith((".part", ".ytdl"))]
         if not candidates:
