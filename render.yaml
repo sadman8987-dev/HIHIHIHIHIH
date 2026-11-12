@@ -1,0 +1,13 @@
+services:
+  - type: worker
+    name: hihihihi-media-bot
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATA_DIR
+        value: /tmp/bot-data
