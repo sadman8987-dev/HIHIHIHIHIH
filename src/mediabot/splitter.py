@@ -10,9 +10,15 @@ from .downloader import DownloadError
 log = logging.getLogger(__name__)
 
 
-def split_media(path: Path, mode: str, duration: int | None, max_bytes: int) -> list[Path]:
-    """Return playable chunks no larger than max_bytes; keep small files intact."""
-    if path.stat().st_size <= max_bytes:
+def split_media(
+    path: Path,
+    mode: str,
+    duration: int | None,
+    max_bytes: int,
+    max_duration_seconds: int = 3600,
+) -> list[Path]:
+    """Split media when it exceeds either the size limit or the duration limit."""
+    if path.stat().st_size <= max_bytes and (duration is None or duration <= max_duration_seconds):
         return [path]
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
@@ -23,7 +29,8 @@ def split_media(path: Path, mode: str, duration: int | None, max_bytes: int) -> 
 
     output_dir = path.parent / "parts"
     output_dir.mkdir(exist_ok=True)
-    seconds = max(2.0, duration * max_bytes * 0.72 / path.stat().st_size)
+    seconds_by_size = duration * max_bytes * 0.72 / path.stat().st_size
+    seconds = max(2.0, min(float(max_duration_seconds), seconds_by_size))
 
     # Stream-copy first to preserve the selected source quality. If keyframe spacing
     # or container limitations prevent safe chunks, retry with forced keyframes.
